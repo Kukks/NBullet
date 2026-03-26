@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="NBullet.Tests/NBullet.Tests.csproj" />
+  <Project Path="NBullet/NBullet.csproj" />
+</Solution>

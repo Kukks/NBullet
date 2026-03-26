@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!-- NuGet package metadata -->
+    <PackageId>NBullet</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>Kukks</Authors>
+    <Description>Bulletproofs++ (BP++) zero-knowledge proof library for .NET. Implements WNLA, arithmetic circuits, and reciprocal range proofs over secp256k1. Ported from distributed-lab/bulletproofs.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>bulletproofs;zero-knowledge;zkp;secp256k1;cryptography;range-proof</PackageTags>
+    <RepositoryUrl>https://github.com/Kukks/NBullet</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/Kukks/NBullet</PackageProjectUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
+    <PackageReference Include="NBitcoin.Secp256k1" Version="3.2.0" />
+  </ItemGroup>
+
+</Project>
