@@ -10,7 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
     <PackageReference Include="coverlet.collector" Version="6.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="xunit" Version="2.5.3" />
@@ -23,6 +22,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\NBullet\NBullet.csproj" />
+    <ProjectReference Include="..\NBullet.Secp256k1\NBullet.Secp256k1.csproj" />
+    <ProjectReference Include="..\NBullet.BouncyCastle\NBullet.BouncyCastle.csproj" />
   </ItemGroup>
 
 </Project>

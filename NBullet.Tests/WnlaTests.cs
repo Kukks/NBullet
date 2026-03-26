@@ -1,4 +1,5 @@
 using NBullet;
+using NBullet.BouncyCastle;
 using NBullet.Secp256k1;
 
 namespace NBullet.Tests;

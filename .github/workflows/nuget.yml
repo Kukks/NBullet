@@ -30,6 +30,12 @@ jobs:
     needs: build-and-test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    strategy:
+      matrix:
+        project:
+          - { name: NBullet, path: NBullet/NBullet.csproj }
+          - { name: NBullet.Secp256k1, path: NBullet.Secp256k1/NBullet.Secp256k1.csproj }
+          - { name: NBullet.BouncyCastle, path: NBullet.BouncyCastle/NBullet.BouncyCastle.csproj }
     steps:
       - uses: actions/checkout@v4
 
@@ -41,28 +47,28 @@ jobs:
       - name: Extract version from csproj
         id: version
         run: |
-          VERSION=$(grep -oP '<Version>\K[^<]+' NBullet/NBullet.csproj)
+          VERSION=$(grep -oP '<Version>\K[^<]+' ${{ matrix.project.path }})
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Detected version: $VERSION"
+          echo "Detected version: $VERSION for ${{ matrix.project.name }}"
 
       - name: Check if version already published
         id: check
         run: |
-          STATUS=$(dotnet nuget list source --format short 2>/dev/null || true)
-          RESPONSE=$(curl -s "https://api.nuget.org/v3-flatcontainer/nbullet/index.json" || echo '{"versions":[]}')
+          PACKAGE_ID=$(echo "${{ matrix.project.name }}" | tr '[:upper:]' '[:lower:]')
+          RESPONSE=$(curl -s "https://api.nuget.org/v3-flatcontainer/${PACKAGE_ID}/index.json" || echo '{"versions":[]}')
           if echo "$RESPONSE" | grep -q "\"${{ steps.version.outputs.version }}\""; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "Version ${{ steps.version.outputs.version }} already published, skipping."
+            echo "Version ${{ steps.version.outputs.version }} already published for ${{ matrix.project.name }}, skipping."
           else
             echo "exists=false" >> $GITHUB_OUTPUT
-            echo "Version ${{ steps.version.outputs.version }} not yet published."
+            echo "Version ${{ steps.version.outputs.version }} not yet published for ${{ matrix.project.name }}."
           fi
 
       - name: Build & Pack
         if: steps.check.outputs.exists == 'false'
         run: |
           dotnet build --configuration Release
-          dotnet pack NBullet/NBullet.csproj --configuration Release --no-build --output ./nupkg
+          dotnet pack ${{ matrix.project.path }} --configuration Release --no-build --output ./nupkg
 
       - name: Publish to NuGet
         if: steps.check.outputs.exists == 'false'

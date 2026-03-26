@@ -5,16 +5,23 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
-    <!-- NuGet package metadata -->
-    <PackageId>NBullet</PackageId>
+    <PackageId>NBullet.BouncyCastle</PackageId>
     <Version>0.1.0</Version>
     <Authors>Kukks</Authors>
-    <Description>Bulletproofs++ (BP++) zero-knowledge proof library for .NET. Implements WNLA, arithmetic circuits, and reciprocal range proofs. Curve and hash agnostic — bring your own IGroup and IFiatShamirEngine.</Description>
+    <Description>BouncyCastle hash adapter for NBullet (Bulletproofs++ for .NET). Provides Keccak-256 and other IDigest-based Fiat-Shamir engines.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageTags>bulletproofs;zero-knowledge;zkp;cryptography;range-proof</PackageTags>
+    <PackageTags>bulletproofs;keccak;bouncycastle;nbullet;cryptography</PackageTags>
     <RepositoryUrl>https://github.com/Kukks/NBullet</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/Kukks/NBullet</PackageProjectUrl>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NBullet\NBullet.csproj" />
+  </ItemGroup>
 
 </Project>

@@ -1,4 +1,6 @@
 <Solution>
-  <Project Path="NBullet.Tests/NBullet.Tests.csproj" />
   <Project Path="NBullet/NBullet.csproj" />
+  <Project Path="NBullet.Secp256k1/NBullet.Secp256k1.csproj" />
+  <Project Path="NBullet.BouncyCastle/NBullet.BouncyCastle.csproj" />
+  <Project Path="NBullet.Tests/NBullet.Tests.csproj" />
 </Solution>

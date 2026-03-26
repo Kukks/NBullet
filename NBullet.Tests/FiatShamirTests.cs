@@ -1,4 +1,5 @@
 using NBullet;
+using NBullet.BouncyCastle;
 using NBullet.Secp256k1;
 using Org.BouncyCastle.Crypto.Digests;
 
@@ -32,6 +33,25 @@ public class FiatShamirTests
         clone.DoFinal(hash, 0);
 
         var c2 = _group.ScalarFromBytes(hash);
+
+        Assert.Equal(c1.ToBigInteger(), c2.ToBigInteger());
+    }
+
+    [Fact]
+    public void TestSha256FS()
+    {
+        var fs = new Sha256FiatShamirEngine();
+        fs.AddScalar(_group.ScalarFromInt(1));
+        fs.AddScalar(_group.ScalarFromInt(2));
+
+        var c1 = fs.GetChallenge(_group);
+
+        // Same inputs should produce same challenge
+        var fs2 = new Sha256FiatShamirEngine();
+        fs2.AddScalar(_group.ScalarFromInt(1));
+        fs2.AddScalar(_group.ScalarFromInt(2));
+
+        var c2 = fs2.GetChallenge(_group);
 
         Assert.Equal(c1.ToBigInteger(), c2.ToBigInteger());
     }

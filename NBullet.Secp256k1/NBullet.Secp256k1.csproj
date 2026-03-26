@@ -5,16 +5,23 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
-    <!-- NuGet package metadata -->
-    <PackageId>NBullet</PackageId>
+    <PackageId>NBullet.Secp256k1</PackageId>
     <Version>0.1.0</Version>
     <Authors>Kukks</Authors>
-    <Description>Bulletproofs++ (BP++) zero-knowledge proof library for .NET. Implements WNLA, arithmetic circuits, and reciprocal range proofs. Curve and hash agnostic — bring your own IGroup and IFiatShamirEngine.</Description>
+    <Description>secp256k1 curve adapter for NBullet (Bulletproofs++ for .NET). Provides IGroup/IScalar/IPoint implementations via NBitcoin.Secp256k1.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageTags>bulletproofs;zero-knowledge;zkp;cryptography;range-proof</PackageTags>
+    <PackageTags>bulletproofs;secp256k1;nbullet;cryptography</PackageTags>
     <RepositoryUrl>https://github.com/Kukks/NBullet</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageProjectUrl>https://github.com/Kukks/NBullet</PackageProjectUrl>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NBitcoin.Secp256k1" Version="3.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NBullet\NBullet.csproj" />
+  </ItemGroup>
 
 </Project>

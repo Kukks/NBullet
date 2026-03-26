@@ -1,14 +1,14 @@
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Digests;
 
-namespace NBullet;
+namespace NBullet.BouncyCastle;
 
 /// <summary>
 /// Fiat-Shamir engine backed by any BouncyCastle IDigest.
 /// Absorbs points and scalars into a running hash state; squeezes challenges
 /// by cloning the state (so the transcript continues absorbing after each challenge).
 /// </summary>
-public sealed class HashFiatShamirEngine : IFiatShamirEngine
+public sealed class BouncyCastleFiatShamirEngine : IFiatShamirEngine
 {
     private readonly IDigest _digest;
     private readonly Func<IDigest, IDigest> _cloner;
@@ -16,18 +16,18 @@ public sealed class HashFiatShamirEngine : IFiatShamirEngine
 
     /// <param name="digest">The digest instance to use (e.g. KeccakDigest, Sha256Digest).</param>
     /// <param name="cloner">A function that creates a snapshot copy of the digest state.</param>
-    public HashFiatShamirEngine(IDigest digest, Func<IDigest, IDigest> cloner)
+    public BouncyCastleFiatShamirEngine(IDigest digest, Func<IDigest, IDigest> cloner)
     {
         _digest = digest;
         _cloner = cloner;
     }
 
     /// <summary>Creates a Keccak-256 backed engine (matches the original Go implementation).</summary>
-    public static HashFiatShamirEngine CreateKeccak() =>
+    public static BouncyCastleFiatShamirEngine CreateKeccak() =>
         new(new KeccakDigest(256), d => new KeccakDigest((KeccakDigest)d));
 
-    /// <summary>Creates a SHA-256 backed engine.</summary>
-    public static HashFiatShamirEngine CreateSha256() =>
+    /// <summary>Creates a SHA-256 backed engine using BouncyCastle's SHA-256.</summary>
+    public static BouncyCastleFiatShamirEngine CreateSha256() =>
         new(new Sha256Digest(), d => new Sha256Digest((Sha256Digest)d));
 
     public void AddPoint(IPoint p)
@@ -51,7 +51,6 @@ public sealed class HashFiatShamirEngine : IFiatShamirEngine
         var hash = new byte[_digest.GetDigestSize()];
         clone.DoFinal(hash, 0);
 
-        // Take first 32 bytes if digest is larger (e.g. SHA-512), pad if smaller
         if (hash.Length > 32)
             hash = hash[..32];
         else if (hash.Length < 32)
@@ -77,11 +76,11 @@ public sealed class HashFiatShamirEngine : IFiatShamirEngine
 }
 
 /// <summary>
-/// Backwards-compatible alias for the Keccak-256 Fiat-Shamir engine.
+/// Convenience alias: Keccak-256 Fiat-Shamir engine matching the original Go implementation.
 /// </summary>
 public sealed class KeccakFiatShamirEngine : IFiatShamirEngine
 {
-    private readonly HashFiatShamirEngine _inner = HashFiatShamirEngine.CreateKeccak();
+    private readonly BouncyCastleFiatShamirEngine _inner = BouncyCastleFiatShamirEngine.CreateKeccak();
 
     public void AddPoint(IPoint p) => _inner.AddPoint(p);
     public void AddScalar(IScalar s) => _inner.AddScalar(s);
