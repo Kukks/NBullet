@@ -29,7 +29,7 @@ jobs:
   publish:
     needs: build-and-test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.NUGET_API_KEY != ''
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     strategy:
       matrix:
         project:
@@ -71,5 +71,7 @@ jobs:
           dotnet pack ${{ matrix.project.path }} --configuration Release --no-build --output ./nupkg
 
       - name: Publish to NuGet
-        if: steps.check.outputs.exists == 'false'
-        run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        if: steps.check.outputs.exists == 'false' && env.NUGET_API_KEY != ''
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: dotnet nuget push ./nupkg/*.nupkg --api-key "$NUGET_API_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
