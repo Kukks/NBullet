@@ -29,7 +29,7 @@ jobs:
   publish:
     needs: build-and-test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && secrets.NUGET_API_KEY != ''
     strategy:
       matrix:
         project:
