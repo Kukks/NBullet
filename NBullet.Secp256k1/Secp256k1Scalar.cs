@@ -9,9 +9,9 @@ namespace NBullet.Secp256k1;
 /// </summary>
 public sealed class Secp256k1Scalar : IScalar
 {
-    internal readonly Scalar Value;
+    public readonly Scalar Value;
 
-    internal Secp256k1Scalar(in Scalar value) => Value = value;
+    public Secp256k1Scalar(in Scalar value) => Value = value;
 
     public IScalar Add(IScalar other) =>
         new Secp256k1Scalar(Value.Add(((Secp256k1Scalar)other).Value));

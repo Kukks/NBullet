@@ -9,10 +9,10 @@ namespace NBullet.Secp256k1;
 /// </summary>
 public sealed class Secp256k1Point : IPoint
 {
-    internal readonly GEJ Gej;
+    public readonly GEJ Gej;
 
-    internal Secp256k1Point(in GEJ gej) => Gej = gej;
-    internal Secp256k1Point(in GE ge) => Gej = ge.ToGroupElementJacobian();
+    public Secp256k1Point(in GEJ gej) => Gej = gej;
+    public Secp256k1Point(in GE ge) => Gej = ge.ToGroupElementJacobian();
 
     public IPoint Add(IPoint other)
     {
