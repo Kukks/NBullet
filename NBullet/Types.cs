@@ -66,6 +66,36 @@ public class ArithmeticCircuitProof
     public WeightNormLinearArgumentProof? WNLA { get; set; }
 }
 
+// ─── Confidential Transaction types ───
+
+public class ConfidentialTxInput
+{
+    public required IPoint ValueCommitment { get; init; }
+    public required IPoint BlindedAssetTag { get; init; }
+}
+
+public class ConfidentialTxOutput
+{
+    public required IPoint ValueCommitment { get; init; }
+    public required IPoint BlindedAssetTag { get; init; }
+}
+
+public class ConfidentialTxWitness
+{
+    public required ulong[] OutputValues { get; init; }
+    public required IScalar[] OutputValueBlindingFactors { get; init; }
+    public required IScalar[] InputAssetBlindingFactors { get; init; }
+    public required IScalar[] OutputAssetBlindingFactors { get; init; }
+    public required int[] MatchingInputIndices { get; init; }
+}
+
+public class ConfidentialTxProof
+{
+    public required ReciprocalProof[] RangeProofs { get; init; }
+    public required ArithmeticCircuitProof? SurjectionProof { get; init; }
+    public required IPoint[] SurjectionCommitments { get; init; }
+}
+
 // ─── Reciprocal range proof types ───
 
 public class ReciprocalPublic
