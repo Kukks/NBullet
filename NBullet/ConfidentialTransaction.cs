@@ -3,9 +3,9 @@ using static NBullet.VectorMath;
 namespace NBullet;
 
 /// <summary>
-/// Unified range + surjection + conservation proof for confidential transactions.
-/// Combines BP++ reciprocal range proofs with an arithmetic circuit surjection proof.
-/// Surjection soundness: binary one-hot selection + conservation + NUMS assumption.
+/// Helper for confidential transactions combining BP++ range proofs with one-hot
+/// selection proofs (surjection) and a conservation (balance) check.
+/// Builds on the general-purpose SelectionProof, Reciprocal, and NumsGenerator primitives.
 /// </summary>
 public static class ConfidentialTransaction
 {
@@ -49,8 +49,19 @@ public static class ConfidentialTransaction
             rangeProofs[j] = Reciprocal.ProveRange(pub, fs, priv, group);
         }
 
-        var (surjectionProof, surjectionComs) =
-            ProveSurjection(inputs, outputs, witness, makeFs(), excess, group);
+        int N = inputs.Length;
+        var selections = new int[M][];
+        for (int j = 0; j < M; j++)
+        {
+            selections[j] = new int[N];
+            selections[j][witness.MatchingInputIndices[j]] = 1;
+        }
+
+        var surjFs = makeFs();
+        AddTranscriptContext(surjFs, inputs, outputs, excess);
+        surjFs.AddScalar(group.ScalarFromInt(-1));
+
+        var (surjectionProof, surjectionComs) = SelectionProof.Prove(M, N, selections, surjFs, group);
 
         return new ConfidentialTxProof
         {
@@ -69,6 +80,7 @@ public static class ConfidentialTransaction
         IGroup group)
     {
         int M = outputs.Length;
+        int N = inputs.Length;
 
         var conservationErr = VerifyConservation(inputs, outputs, excess, group);
         if (conservationErr != null) return conservationErr;
@@ -89,8 +101,15 @@ public static class ConfidentialTransaction
             if (err != null) return $"range proof {j} failed: {err}";
         }
 
-        var surjErr = VerifySurjection(inputs, outputs, proof, makeFs(), excess, group);
-        if (surjErr != null) return surjErr;
+        if (proof.SurjectionProof == null)
+            return "missing surjection proof";
+
+        var surjFs = makeFs();
+        AddTranscriptContext(surjFs, inputs, outputs, excess);
+        surjFs.AddScalar(group.ScalarFromInt(-1));
+
+        var surjErr = SelectionProof.Verify(M, N, proof.SurjectionCommitments, proof.SurjectionProof, surjFs, group);
+        if (surjErr != null) return $"surjection failed: {surjErr}";
 
         return null;
     }
@@ -113,153 +132,6 @@ public static class ConfidentialTransaction
             return "conservation failed: sum(outputs) - sum(inputs) != excess";
 
         return null;
-    }
-
-    private static (ArithmeticCircuitProof proof, IPoint[] commitments) ProveSurjection(
-        ConfidentialTxInput[] inputs, ConfidentialTxOutput[] outputs,
-        ConfidentialTxWitness witness, IFiatShamirEngine fs,
-        IPoint excess, IGroup group)
-    {
-        int M = outputs.Length;
-        int N = inputs.Length;
-
-        AddTranscriptContext(fs, inputs, outputs, excess);
-        fs.AddScalar(group.ScalarFromInt(-1));
-
-        var selections = new IScalar[M][];
-        for (int j = 0; j < M; j++)
-        {
-            selections[j] = ZeroVector(group, N);
-            selections[j][witness.MatchingInputIndices[j]] = group.ScalarFromInt(1);
-        }
-
-        int Nm = M * N;
-        int No = 0;
-        int Nv = 1;
-        int Nl = Nv;
-        int Nw = 2 * Nm;
-        int K = M;
-
-        var wlArr = new IScalar[Nm];
-        var wrArr = new IScalar[Nm];
-
-        var vArr = new IScalar[M][];
-        var svArr = new IScalar[M];
-
-        for (int j = 0; j < M; j++)
-        {
-            for (int i = 0; i < N; i++)
-            {
-                wlArr[j * N + i] = selections[j][i];
-                wrArr[j * N + i] = selections[j][i];
-            }
-            vArr[j] = new[] { group.ScalarFromInt(0) };
-            svArr[j] = group.RandomScalar();
-        }
-
-        var Am = ZeroVector(group, Nm);
-        var Wm = ZeroMatrix(group, Nm, Nw);
-        for (int idx = 0; idx < Nm; idx++)
-            Wm[idx][idx] = group.ScalarFromInt(1);
-
-        var Al = ZeroVector(group, Nl * K);
-        var Wl = ZeroMatrix(group, Nl * K, Nw);
-        for (int j = 0; j < M; j++)
-        {
-            Al[j] = group.ScalarFromInt(-1);
-            for (int i = 0; i < N; i++)
-                Wl[j][j * N + i] = group.ScalarFromInt(1);
-        }
-
-        int totalG = PowerOfTwo(Nm);
-        int totalH = PowerOfTwo(9 + Nv);
-
-        var gvec = NumsGenerator.DeterministicGenerators("NBullet.Surj.GVec", totalG, group);
-        var hvec = NumsGenerator.DeterministicGenerators("NBullet.Surj.HVec", totalH, group);
-
-        var pub = new ArithmeticCircuitPublic
-        {
-            Nm = Nm, Nl = Nl, Nv = Nv, Nw = Nw, No = No, K = K,
-            G = NumsGenerator.StandardH(group),
-            GVec = gvec[..Nm],
-            HVec = hvec[..(9 + Nv)],
-            Wm = Wm, Wl = Wl, Am = Am, Al = Al,
-            Fl = true, Fm = false,
-            F = (_, _) => null,
-            GVec_ = gvec[Nm..],
-            HVec_ = hvec[(9 + Nv)..]
-        };
-
-        var priv = new ArithmeticCircuitPrivate
-        {
-            V = vArr, Sv = svArr,
-            Wl = wlArr, Wr = wrArr, Wo = Array.Empty<IScalar>()
-        };
-
-        var V = new IPoint[K];
-        for (int i = 0; i < K; i++)
-            V[i] = ArithmeticCircuit.CommitCircuit(pub, priv.V[i], priv.Sv[i], group);
-
-        var proof = ArithmeticCircuit.ProveCircuit(pub, V, fs, priv, group);
-        return (proof, V);
-    }
-
-    private static string? VerifySurjection(
-        ConfidentialTxInput[] inputs, ConfidentialTxOutput[] outputs,
-        ConfidentialTxProof proof, IFiatShamirEngine fs,
-        IPoint excess, IGroup group)
-    {
-        if (proof.SurjectionProof == null)
-            return "missing surjection proof";
-
-        int M = outputs.Length;
-        int N = inputs.Length;
-
-        AddTranscriptContext(fs, inputs, outputs, excess);
-        fs.AddScalar(group.ScalarFromInt(-1));
-
-        int Nm = M * N;
-        int No = 0;
-        int Nv = 1;
-        int Nl = Nv;
-        int Nw = 2 * Nm;
-        int K = M;
-
-        var Am = ZeroVector(group, Nm);
-        var Wm = ZeroMatrix(group, Nm, Nw);
-        for (int idx = 0; idx < Nm; idx++)
-            Wm[idx][idx] = group.ScalarFromInt(1);
-
-        var Al = ZeroVector(group, Nl * K);
-        var Wl = ZeroMatrix(group, Nl * K, Nw);
-        for (int j = 0; j < M; j++)
-        {
-            Al[j] = group.ScalarFromInt(-1);
-            for (int i = 0; i < N; i++)
-                Wl[j][j * N + i] = group.ScalarFromInt(1);
-        }
-
-        int totalG = PowerOfTwo(Nm);
-        int totalH = PowerOfTwo(9 + Nv);
-
-        var gvec = NumsGenerator.DeterministicGenerators("NBullet.Surj.GVec", totalG, group);
-        var hvec = NumsGenerator.DeterministicGenerators("NBullet.Surj.HVec", totalH, group);
-
-        var pub = new ArithmeticCircuitPublic
-        {
-            Nm = Nm, Nl = Nl, Nv = Nv, Nw = Nw, No = No, K = K,
-            G = NumsGenerator.StandardH(group),
-            GVec = gvec[..Nm],
-            HVec = hvec[..(9 + Nv)],
-            Wm = Wm, Wl = Wl, Am = Am, Al = Al,
-            Fl = true, Fm = false,
-            F = (_, _) => null,
-            GVec_ = gvec[Nm..],
-            HVec_ = hvec[(9 + Nv)..]
-        };
-
-        return ArithmeticCircuit.VerifyCircuit(pub, proof.SurjectionCommitments, fs,
-            proof.SurjectionProof, group);
     }
 
     private static void AddTranscriptContext(
