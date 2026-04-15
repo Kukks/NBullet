@@ -97,6 +97,13 @@ public sealed class Secp256k1Group : IGroup
         return new Secp256k1Scalar(result);
     }
 
+    public IPoint? TryParsePoint(byte[] serialized)
+    {
+        if (GE.TryParse(serialized, out GE ge))
+            return new Secp256k1Point(ge);
+        return null;
+    }
+
     private static byte[] BigIntegerTo32Bytes(BigInteger v)
     {
         // BigInteger.ToByteArray() is little-endian and signed.
