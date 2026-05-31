@@ -122,3 +122,16 @@ public class ReciprocalProof
     public required ArithmeticCircuitProof CircuitProof { get; init; }
     public required IPoint V { get; init; }
 }
+
+// ─── Asset surjection types ───
+
+/// <summary>
+/// Schnorr 1-of-N OR-proof that <c>outputAssetTag - inputAssetTags[k] = d * G</c>
+/// for some hidden index k and scalar d.
+/// Compressed form: only (e_i, s_i) per branch — verifier reconstructs the commitments.
+/// </summary>
+public class AssetSurjectionProof
+{
+    public required IScalar[] Challenges { get; init; }   // length N
+    public required IScalar[] Responses { get; init; }    // length N
+}
