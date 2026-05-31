@@ -135,3 +135,18 @@ public class AssetSurjectionProof
     public required IScalar[] Challenges { get; init; }   // length N
     public required IScalar[] Responses { get; init; }    // length N
 }
+
+// ─── Unified confidential transaction types ───
+
+/// <summary>
+/// Combined proof artifact for <see cref="UnifiedConfidentialTransaction"/>:
+/// bundles per-output range proofs, a single one-hot selection proof, and
+/// per-output Schnorr 1-of-N asset surjection proofs.
+/// </summary>
+public class UnifiedConfidentialTxProof
+{
+    public required ReciprocalProof[] RangeProofs { get; init; }                  // length M
+    public required ArithmeticCircuitProof OneHotProof { get; init; }
+    public required IPoint[] OneHotCommitments { get; init; }                     // length M
+    public required AssetSurjectionProof[] AssetSurjectionProofs { get; init; }   // length M
+}
