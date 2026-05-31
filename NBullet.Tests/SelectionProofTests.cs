@@ -100,4 +100,43 @@ public class SelectionProofTests
             new Sha256FiatShamirEngine(), _group);
         Assert.NotNull(err);
     }
+
+    [Fact]
+    public void TestRejects_TwoOnes()
+    {
+        var selections = new[] { new[] { 1, 1, 0 } };
+
+        var (proof, coms) = SelectionProof.Prove(1, 3, selections,
+            new Sha256FiatShamirEngine(), _group);
+
+        var err = SelectionProof.Verify(1, 3, coms, proof,
+            new Sha256FiatShamirEngine(), _group);
+        Assert.NotNull(err);
+    }
+
+    [Fact]
+    public void TestRejects_AllZeros()
+    {
+        var selections = new[] { new[] { 0, 0, 0 } };
+
+        var (proof, coms) = SelectionProof.Prove(1, 3, selections,
+            new Sha256FiatShamirEngine(), _group);
+
+        var err = SelectionProof.Verify(1, 3, coms, proof,
+            new Sha256FiatShamirEngine(), _group);
+        Assert.NotNull(err);
+    }
+
+    [Fact]
+    public void TestRejects_NonBinaryValue()
+    {
+        var selections = new[] { new[] { 2, 0, 0 } };
+
+        var (proof, coms) = SelectionProof.Prove(1, 3, selections,
+            new Sha256FiatShamirEngine(), _group);
+
+        var err = SelectionProof.Verify(1, 3, coms, proof,
+            new Sha256FiatShamirEngine(), _group);
+        Assert.NotNull(err);
+    }
 }
