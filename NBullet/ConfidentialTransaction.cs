@@ -4,9 +4,22 @@ namespace NBullet;
 
 /// <summary>
 /// Helper for confidential transactions combining BP++ range proofs with one-hot
-/// selection proofs (surjection) and a conservation (balance) check.
+/// selection proofs and a conservation (balance) check.
 /// Builds on the general-purpose SelectionProof, Reciprocal, and NumsGenerator primitives.
 /// </summary>
+/// <remarks>
+/// <para>
+/// This helper does NOT enforce asset-tag surjection — it only proves that the
+/// prover knows a one-hot selection vector per output and that values balance.
+/// A prover who supplies a mismatched <c>MatchingInputIndices</c> still produces
+/// a proof that <see cref="Verify"/> accepts.
+/// </para>
+/// <para>
+/// Use <see cref="UnifiedConfidentialTransaction"/> for a variant that adds a
+/// Schnorr 1-of-N <see cref="AssetSurjection"/> proof and actually enforces that
+/// each output's asset generator matches some input's.
+/// </para>
+/// </remarks>
 public static class ConfidentialTransaction
 {
     public static IPoint CommitValue(IPoint valueBase, IScalar value, IScalar blinding, IPoint blindingBase)

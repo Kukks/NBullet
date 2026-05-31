@@ -20,7 +20,8 @@ This library implements:
 | **NUMS Generators** | Deterministic nothing-up-my-sleeve points | Trustless setup for any protocol |
 | **Selection Proofs** | Prove one-of-N membership without revealing which | Surjection proofs, anonymous credentials, voting |
 | **Batch Verification** | Verify multiple proofs efficiently | High-throughput systems |
-| **Confidential Transactions** | Range + surjection + conservation (helper) | Privacy-preserving asset transfers |
+| **Confidential Transactions** | Range + one-hot + conservation; does **not** enforce asset surjection (legacy helper) | Privacy-preserving asset transfers (use only when asset binding is enforced elsewhere) |
+| **Unified Confidential Transactions** | Range + one-hot + Schnorr 1-of-N asset surjection + conservation | Privacy-preserving asset transfers with enforced asset binding |
 
 ## Packages
 
@@ -121,6 +122,8 @@ var error = BatchVerifier.VerifyBatch(items, group);
 
 ### Confidential Transactions (helper)
 
+> **Note:** This helper proves one-hot selection but does **not** bind that selection to the asset generators. For a variant that enforces asset surjection via a Schnorr 1-of-N proof, use `UnifiedConfidentialTransaction` (same API shape).
+
 The `ConfidentialTransaction` helper combines range proofs, selection proofs, and a conservation check for privacy-preserving asset transfers:
 
 ```csharp
@@ -156,6 +159,16 @@ IFiatShamirEngine MakeFs() => new Sha256FiatShamirEngine();
 var proof = ConfidentialTransaction.Prove(inputs, outputs, excess, witness, MakeFs, group);
 var error = ConfidentialTransaction.Verify(inputs, outputs, excess, proof, MakeFs, group);
 ```
+
+### Unified Confidential Transactions (with enforced asset surjection)
+
+```csharp
+// Same setup as ConfidentialTransaction
+var proof = UnifiedConfidentialTransaction.Prove(inputs, outputs, excess, witness, MakeFs, group);
+var error = UnifiedConfidentialTransaction.Verify(inputs, outputs, excess, proof, MakeFs, group);
+```
+
+The proof bundles range proofs, a one-hot selection proof, and per-output Schnorr 1-of-N asset-surjection proofs. Use this in preference to the legacy `ConfidentialTransaction` helper when asset binding must be enforced.
 
 ### Using Keccak-256 (matches Go implementation)
 
@@ -248,20 +261,23 @@ var fs = new BouncyCastleFiatShamirEngine(
 ### Project Structure
 
 ```
-NBullet/                             # Core (zero external dependencies)
-  IGroup.cs, IScalar.cs, IPoint.cs     Curve abstraction
-  IFiatShamirEngine.cs                 Hash abstraction
-  Sha256FiatShamirEngine.cs            Built-in SHA-256 Fiat-Shamir engine
-  Types.cs                             Proof structures & public parameters
-  Wnla.cs                              Weight Norm Linear Argument protocol
-  ArithmeticCircuit.cs                  Arithmetic circuit proofs
-  Reciprocal.cs                         Reciprocal range proofs
-  NumsGenerator.cs                      Deterministic NUMS point generation
-  SelectionProof.cs                     One-hot selection (membership) proofs
-  BatchVerifier.cs                      Batch verification for multiple proofs
-  ConfidentialTransaction.cs            CT helper (range + surjection + conservation)
-  VectorMath.cs                         Vector/matrix arithmetic helpers
-  NumberUtils.cs                        Hex decomposition utilities
+NBullet/                                # Core (zero external dependencies)
+  IGroup.cs, IScalar.cs, IPoint.cs        Curve abstraction
+  IFiatShamirEngine.cs                    Hash abstraction
+  Sha256FiatShamirEngine.cs               Built-in SHA-256 Fiat-Shamir engine
+  Types.cs                                Proof structures & public parameters
+  Wnla.cs                                 Weight Norm Linear Argument protocol
+  ArithmeticCircuit.cs                    Arithmetic circuit proofs
+  Reciprocal.cs                           Reciprocal range proofs
+  NumsGenerator.cs                        Deterministic NUMS point generation
+  SelectionProof.cs                       One-hot selection (membership) proofs
+  AssetSurjection.cs                      Schnorr 1-of-N asset binding (CDS '94)
+  MsmAccumulator.cs                       Multi-scalar accumulator for batched verification
+  BatchVerifier.cs                        Batch verification for multiple proofs
+  ConfidentialTransaction.cs              Legacy CT helper (range + one-hot + conservation, NO asset binding)
+  UnifiedConfidentialTransaction.cs       CT with enforced asset surjection
+  VectorMath.cs                           Vector/matrix arithmetic helpers
+  NumberUtils.cs                          Hex decomposition utilities
 
 NBullet.Secp256k1/                   # secp256k1 curve adapter
   Secp256k1Group.cs                    IGroup for secp256k1
@@ -271,26 +287,31 @@ NBullet.Secp256k1/                   # secp256k1 curve adapter
 NBullet.BouncyCastle/                # BouncyCastle hash adapters
   KeccakFiatShamirEngine.cs            Keccak-256 + generic BouncyCastle IDigest engine
 
-NBullet.Tests/                       # All tests
-  WnlaTests.cs                        WNLA proof round-trip
-  ArithmeticCircuitTests.cs            Circuit proofs (addition/multiplication, binary range)
-  ReciprocalTests.cs                   Reciprocal range proof for uint64
-  NumsGeneratorTests.cs                NUMS derivation, determinism, domain separation
-  SelectionProofTests.cs               One-hot selection proof round-trips
-  BatchVerifierTests.cs                Batch verification (range + confidential)
-  ConfidentialTransactionTests.cs      Confidential transaction end-to-end
-  FiatShamirTests.cs                   Fiat-Shamir determinism (SHA-256 + Keccak)
-  NumberUtilsTests.cs                  Hex conversion
+NBullet.Tests/                              # All tests
+  WnlaTests.cs                              WNLA proof round-trip
+  ArithmeticCircuitTests.cs                 Circuit proofs (addition/multiplication, binary range)
+  ReciprocalTests.cs                        Reciprocal range proof for uint64
+  NumsGeneratorTests.cs                     NUMS derivation, determinism, domain separation
+  SelectionProofTests.cs                    One-hot selection proof round-trips + negatives
+  AssetSurjectionTests.cs                   Schnorr 1-of-N round-trip + tamper rejection
+  MsmAccumulatorTests.cs                    MSM accumulator behavior
+  BatchVerifierTests.cs                     Batch verification (range + confidential)
+  ConfidentialTransactionTests.cs           Confidential transaction end-to-end (legacy helper)
+  UnifiedConfidentialTransactionTests.cs    CT with enforced asset surjection
+  FiatShamirTests.cs                        Fiat-Shamir determinism (SHA-256 + Keccak)
+  NumberUtilsTests.cs                       Hex conversion
 ```
 
 ### Protocol Overview
 
 ```
-  Confidential Transaction (helper)
+  ConfidentialTransaction (legacy helper, no asset binding)
+  UnifiedConfidentialTransaction (with Schnorr 1-of-N asset surjection)
          |
-         | combines
+         | combine
          v
-  Range Proof (Reciprocal)  +  Selection Proof  +  Conservation Check
+  Range Proof (Reciprocal)  +  Selection Proof  +  AssetSurjection*  +  Conservation Check
+                                                     (* unified only)
          |                          |
          | constructs constraints   | builds one-hot circuit
          v                          v
@@ -321,7 +342,9 @@ NBullet.Tests/                       # All tests
 
 **Batch Verification** allows verifying multiple independent proofs faster than checking each one individually, using randomized linear combinations of verification equations.
 
-**Confidential Transactions** is a helper that composes range proofs, selection proofs, and a balance (conservation) check for privacy-preserving asset transfers with blinded amounts and asset tags.
+**Confidential Transactions** is a helper that composes range proofs, selection proofs, and a balance (conservation) check for privacy-preserving asset transfers with blinded amounts and asset tags. The legacy `ConfidentialTransaction` does **not** enforce that an output's asset matches one of the inputs' assets — it only proves that the prover knows a one-hot selection vector. `UnifiedConfidentialTransaction` is the variant that adds a Schnorr 1-of-N asset-surjection proof to actually bind the selection to the asset generators.
+
+**Asset Surjection (Schnorr 1-of-N)** is a standalone Cramer-Damgård-Schoenmakers OR-proof primitive that proves an output's blinded asset tag differs from some input's blinded asset tag by only a known scalar — hiding which input matched.
 
 ## Differences from the Go Implementation
 
