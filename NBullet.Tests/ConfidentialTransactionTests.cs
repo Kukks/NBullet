@@ -255,4 +255,30 @@ public class ConfidentialTransactionTests
 
         Assert.Null(err);
     }
+
+    // ConfidentialTransaction.SelectionProof only enforces one-hot structure of the
+    // selection vector; it does not bind the vector to the asset generators. A prover
+    // who claims a wrong matching index currently produces a proof that verifies.
+    // UnifiedConfidentialTransaction (Phase 3b) actually enforces asset surjection.
+    [Fact(Skip = "Exposes incomplete asset surjection in ConfidentialTransaction; UnifiedConfidentialTransaction enforces it (Phase 3b)")]
+    public void TestSurjectionMismatch_OutputAssetNotInInputs()
+    {
+        var assetBtc = NumsGenerator.ApplicationGenerator("BTC", new byte[] { 0x01 }, _group);
+        var assetUsd = NumsGenerator.ApplicationGenerator("USD", new byte[] { 0x02 }, _group);
+
+        var (inputs, outputs, excess, witness) = BuildTransaction(
+            inputValues: new ulong[] { 100 },
+            outputValues: new ulong[] { 100 },
+            matchingIndices: new int[] { 0 },
+            inputAssetGens: new[] { assetBtc },
+            outputAssetGens: new[] { assetUsd }
+        );
+
+        IFiatShamirEngine MakeFs() => new Sha256FiatShamirEngine();
+
+        var proof = ConfidentialTransaction.Prove(inputs, outputs, excess, witness, MakeFs, _group);
+        var err = ConfidentialTransaction.Verify(inputs, outputs, excess, proof, MakeFs, _group);
+
+        Assert.NotNull(err);
+    }
 }
