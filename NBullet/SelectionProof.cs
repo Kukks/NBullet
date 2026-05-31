@@ -55,6 +55,16 @@ public static class SelectionProof
         int K, int N, IPoint[] commitments,
         ArithmeticCircuitProof proof, IFiatShamirEngine fs, IGroup group)
     {
+        var acc = new MsmAccumulator();
+        var err = AccumulateVerify(K, N, commitments, proof, fs, group.ScalarFromInt(1), acc, group);
+        if (err != null) return err;
+        return acc.Sum(group).IsInfinity ? null : "failed to verify proof";
+    }
+
+    public static string? AccumulateVerify(
+        int K, int N, IPoint[] commitments,
+        ArithmeticCircuitProof proof, IFiatShamirEngine fs, IScalar weight, MsmAccumulator acc, IGroup group)
+    {
         int Nm = K * N;
         int No = 0;
         int Nv = 1;
@@ -63,7 +73,7 @@ public static class SelectionProof
 
         var pub = BuildCircuit(K, N, Nm, Nl, Nv, Nw, No, group);
 
-        return ArithmeticCircuit.VerifyCircuit(pub, commitments, fs, proof, group);
+        return ArithmeticCircuit.AccumulateCircuit(pub, commitments, fs, proof, weight, acc, group);
     }
 
     private static ArithmeticCircuitPublic BuildCircuit(
