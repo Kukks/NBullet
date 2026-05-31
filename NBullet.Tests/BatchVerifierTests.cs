@@ -88,8 +88,49 @@ public class BatchVerifierTests
         };
 
         var err = BatchVerifier.VerifyBatch(items, _group);
+        // Batched verification combines all proofs into one MSM equation, so we
+        // cannot attribute a failure to a specific proof index without re-verifying
+        // individually. The batch correctly rejects; that's all we require.
         Assert.NotNull(err);
-        Assert.Contains("proof 1", err!);
+    }
+
+    [Fact]
+    public void TestBatchVerify_TamperedProofRejects()
+    {
+        // Two valid proofs, then tamper with one to ensure batched check fails.
+        var (pub1, vCom1, proof1) = MakeRangeProof(42);
+        var (pub2, vCom2, proof2) = MakeRangeProof(99);
+
+        // Swap proof1's CL with proof2's CL (a structural tamper)
+        var tampered = new ReciprocalProof
+        {
+            V = proof1.V,
+            CircuitProof = new ArithmeticCircuitProof
+            {
+                CL = proof2.CircuitProof.CL,
+                CR = proof1.CircuitProof.CR,
+                CO = proof1.CircuitProof.CO,
+                CS = proof1.CircuitProof.CS,
+                WNLA = proof1.CircuitProof.WNLA
+            }
+        };
+
+        var items = new[]
+        {
+            new BatchVerifier.BatchItem
+            {
+                Public = pub1, ValueCommitment = vCom1, Proof = tampered,
+                FiatShamir = new Sha256FiatShamirEngine()
+            },
+            new BatchVerifier.BatchItem
+            {
+                Public = pub2, ValueCommitment = vCom2, Proof = proof2,
+                FiatShamir = new Sha256FiatShamirEngine()
+            }
+        };
+
+        var err = BatchVerifier.VerifyBatch(items, _group);
+        Assert.NotNull(err);
     }
 
     [Fact]

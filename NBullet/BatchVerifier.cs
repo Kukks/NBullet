@@ -19,7 +19,8 @@ public static class BatchVerifier
 
     /// <summary>
     /// Verify N independent range proofs faster than verifying individually.
-    /// Uses random weights to combine verification equations.
+    /// Folds each proof's verification equation into a shared MsmAccumulator with a
+    /// random outer weight; one final point-equality check decides the entire batch.
     /// Returns null if all valid, error message otherwise.
     /// </summary>
     public static string? VerifyBatch(BatchItem[] items, IGroup group)
@@ -27,23 +28,18 @@ public static class BatchVerifier
         if (items.Length == 0)
             return null;
 
-        if (items.Length == 1)
-            return Reciprocal.VerifyRange(items[0].Public, items[0].ValueCommitment,
-                items[0].FiatShamir, items[0].Proof, group);
-
-        var weights = new IScalar[items.Length];
-        weights[0] = group.ScalarFromInt(1);
-        for (int i = 1; i < items.Length; i++)
-            weights[i] = group.RandomScalar();
+        var acc = new MsmAccumulator();
 
         for (int i = 0; i < items.Length; i++)
         {
-            var err = Reciprocal.VerifyRange(items[i].Public, items[i].ValueCommitment,
-                items[i].FiatShamir, items[i].Proof, group);
-            if (err != null) return $"proof {i} failed: {err}";
+            var weight = i == 0 ? group.ScalarFromInt(1) : group.RandomScalar();
+            var err = Reciprocal.AccumulateRange(
+                items[i].Public, items[i].ValueCommitment,
+                items[i].FiatShamir, items[i].Proof, weight, acc, group);
+            if (err != null) return $"proof {i} structural error: {err}";
         }
 
-        return null;
+        return acc.Sum(group).IsInfinity ? null : "batch verification failed";
     }
 
     /// <summary>
