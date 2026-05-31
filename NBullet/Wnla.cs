@@ -29,14 +29,31 @@ public static class Wnla
     public static string? VerifyWnla(WeightNormLinearPublic pub, WeightNormLinearArgumentProof proof,
         IPoint com, IFiatShamirEngine fs, IGroup group)
     {
+        var acc = new MsmAccumulator();
+        var err = AccumulateWnla(pub, proof, com, fs, group.ScalarFromInt(1), acc, group);
+        if (err != null) return err;
+        return acc.Sum(group).IsInfinity ? null : "failed to verify proof";
+    }
+
+    /// <summary>
+    /// Recursive WNLA verification that accumulates its final point-equality check into a shared
+    /// MsmAccumulator weighted by <paramref name="weight"/>, instead of evaluating the check
+    /// eagerly. Returns null on structural success; returns a non-null error string if the proof
+    /// structure is malformed.
+    /// </summary>
+    public static string? AccumulateWnla(WeightNormLinearPublic pub, WeightNormLinearArgumentProof proof,
+        IPoint com, IFiatShamirEngine fs, IScalar weight, MsmAccumulator acc, IGroup group)
+    {
         if (proof.X.Length != proof.R.Length)
             return "invalid length for R and X vectors: should be equal";
 
         if (proof.X.Length == 0)
         {
+            // Leaf: expected = CommitWnla(pub, L, N). Final check is expected == com.
+            // Accumulate (expected - com) * weight into the MsmAccumulator instead of checking eagerly.
             var expected = CommitWnla(pub, proof.L, proof.N, group);
-            if (!expected.Eq(com))
-                return "failed to verify proof";
+            acc.Add(weight, expected);
+            acc.Add(weight.Negate(), com);
             return null;
         }
 
@@ -60,7 +77,7 @@ public static class Wnla
         var yy_minus_1 = y.Mul(y).Sub(group.ScalarFromInt(1));
         com_ = com_.Add(proof.R[0].ScalarMul(yy_minus_1));
 
-        return VerifyWnla(
+        return AccumulateWnla(
             new WeightNormLinearPublic
             {
                 G = pub.G,
@@ -79,6 +96,8 @@ public static class Wnla
             },
             com_,
             fs,
+            weight,
+            acc,
             group
         );
     }
