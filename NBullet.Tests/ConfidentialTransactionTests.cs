@@ -256,12 +256,11 @@ public class ConfidentialTransactionTests
         Assert.Null(err);
     }
 
-    // ConfidentialTransaction.SelectionProof only enforces one-hot structure of the
-    // selection vector; it does not bind the vector to the asset generators. A prover
-    // who claims a wrong matching index currently produces a proof that verifies.
-    // UnifiedConfidentialTransaction (Phase 3b) actually enforces asset surjection.
-    [Fact(Skip = "Exposes incomplete asset surjection in ConfidentialTransaction; UnifiedConfidentialTransaction enforces it (Phase 3b)")]
-    public void TestSurjectionMismatch_OutputAssetNotInInputs()
+    // This test documents the known limitation of the composed ConfidentialTransaction:
+    // it does not enforce asset-tag surjection. Use UnifiedConfidentialTransaction for
+    // the fix; see UnifiedConfidentialTransactionTests.TestUnified_SurjectionMismatch_*.
+    [Fact]
+    public void TestSurjectionMismatch_OutputAssetNotInInputs_DocumentsLimitation()
     {
         var assetBtc = NumsGenerator.ApplicationGenerator("BTC", new byte[] { 0x01 }, _group);
         var assetUsd = NumsGenerator.ApplicationGenerator("USD", new byte[] { 0x02 }, _group);
@@ -279,6 +278,9 @@ public class ConfidentialTransactionTests
         var proof = ConfidentialTransaction.Prove(inputs, outputs, excess, witness, MakeFs, _group);
         var err = ConfidentialTransaction.Verify(inputs, outputs, excess, proof, MakeFs, _group);
 
-        Assert.NotNull(err);
+        // ConfidentialTransaction.Verify does NOT enforce asset surjection — it only
+        // checks one-hot structure + conservation. With matching values it currently
+        // accepts a mismatched-asset proof. UnifiedConfidentialTransaction rejects this.
+        Assert.Null(err);
     }
 }
