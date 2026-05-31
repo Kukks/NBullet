@@ -18,6 +18,19 @@ public static class ArithmeticCircuit
     public static string? VerifyCircuit(ArithmeticCircuitPublic pub, IPoint[] V,
         IFiatShamirEngine fs, ArithmeticCircuitProof proof, IGroup group)
     {
+        var acc = new MsmAccumulator();
+        var err = AccumulateCircuit(pub, V, fs, proof, group.ScalarFromInt(1), acc, group);
+        if (err != null) return err;
+        return acc.Sum(group).IsInfinity ? null : "failed to verify proof";
+    }
+
+    /// <summary>
+    /// Arithmetic circuit verification that accumulates its final WNLA point-equality check
+    /// into a shared MsmAccumulator weighted by <paramref name="weight"/>.
+    /// </summary>
+    public static string? AccumulateCircuit(ArithmeticCircuitPublic pub, IPoint[] V,
+        IFiatShamirEngine fs, ArithmeticCircuitProof proof, IScalar weight, MsmAccumulator acc, IGroup group)
+    {
         fs.AddPoint(proof.CL);
         fs.AddPoint(proof.CR);
         fs.AddPoint(proof.CO);
@@ -95,7 +108,7 @@ public static class ArithmeticCircuit
         CT = CT.Add(proof.CR.ScalarMul(t2.Negate()));
         CT = CT.Add(vSum.ScalarMul(t3));
 
-        return Wnla.VerifyWnla(
+        return Wnla.AccumulateWnla(
             new WeightNormLinearPublic
             {
                 G = pub.G,
@@ -108,6 +121,8 @@ public static class ArithmeticCircuit
             proof.WNLA!,
             CT,
             fs,
+            weight,
+            acc,
             group
         );
     }
