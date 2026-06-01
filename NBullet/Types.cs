@@ -66,6 +66,36 @@ public class ArithmeticCircuitProof
     public WeightNormLinearArgumentProof? WNLA { get; set; }
 }
 
+// ─── Confidential Transaction types ───
+
+public class ConfidentialTxInput
+{
+    public required IPoint ValueCommitment { get; init; }
+    public required IPoint BlindedAssetTag { get; init; }
+}
+
+public class ConfidentialTxOutput
+{
+    public required IPoint ValueCommitment { get; init; }
+    public required IPoint BlindedAssetTag { get; init; }
+}
+
+public class ConfidentialTxWitness
+{
+    public required ulong[] OutputValues { get; init; }
+    public required IScalar[] OutputValueBlindingFactors { get; init; }
+    public required IScalar[] InputAssetBlindingFactors { get; init; }
+    public required IScalar[] OutputAssetBlindingFactors { get; init; }
+    public required int[] MatchingInputIndices { get; init; }
+}
+
+public class ConfidentialTxProof
+{
+    public required ReciprocalProof[] RangeProofs { get; init; }
+    public required ArithmeticCircuitProof? SurjectionProof { get; init; }
+    public required IPoint[] SurjectionCommitments { get; init; }
+}
+
 // ─── Reciprocal range proof types ───
 
 public class ReciprocalPublic
@@ -91,4 +121,32 @@ public class ReciprocalProof
 {
     public required ArithmeticCircuitProof CircuitProof { get; init; }
     public required IPoint V { get; init; }
+}
+
+// ─── Asset surjection types ───
+
+/// <summary>
+/// Schnorr 1-of-N OR-proof that <c>outputAssetTag - inputAssetTags[k] = d * G</c>
+/// for some hidden index k and scalar d.
+/// Compressed form: only (e_i, s_i) per branch — verifier reconstructs the commitments.
+/// </summary>
+public class AssetSurjectionProof
+{
+    public required IScalar[] Challenges { get; init; }   // length N
+    public required IScalar[] Responses { get; init; }    // length N
+}
+
+// ─── Unified confidential transaction types ───
+
+/// <summary>
+/// Combined proof artifact for <see cref="UnifiedConfidentialTransaction"/>:
+/// bundles per-output range proofs, a single one-hot selection proof, and
+/// per-output Schnorr 1-of-N asset surjection proofs.
+/// </summary>
+public class UnifiedConfidentialTxProof
+{
+    public required ReciprocalProof[] RangeProofs { get; init; }                  // length M
+    public required ArithmeticCircuitProof OneHotProof { get; init; }
+    public required IPoint[] OneHotCommitments { get; init; }                     // length M
+    public required AssetSurjectionProof[] AssetSurjectionProofs { get; init; }   // length M
 }

@@ -106,6 +106,19 @@ public static class Reciprocal
     public static string? VerifyRange(ReciprocalPublic pub, IPoint vCom, IFiatShamirEngine fs,
         ReciprocalProof proof, IGroup group)
     {
+        var acc = new MsmAccumulator();
+        var err = AccumulateRange(pub, vCom, fs, proof, group.ScalarFromInt(1), acc, group);
+        if (err != null) return err;
+        return acc.Sum(group).IsInfinity ? null : "failed to verify proof";
+    }
+
+    /// <summary>
+    /// Range proof verification that accumulates into a shared MsmAccumulator weighted by
+    /// <paramref name="weight"/>. Builds the circuit then delegates to AccumulateCircuit.
+    /// </summary>
+    public static string? AccumulateRange(ReciprocalPublic pub, IPoint vCom, IFiatShamirEngine fs,
+        ReciprocalProof proof, IScalar weight, MsmAccumulator acc, IGroup group)
+    {
         fs.AddPoint(vCom);
 
         var e = fs.GetChallenge(group);
@@ -151,6 +164,6 @@ public static class Reciprocal
 
         var combined = vCom.Add(proof.V);
 
-        return ArithmeticCircuit.VerifyCircuit(circuit, new[] { combined }, fs, proof.CircuitProof, group);
+        return ArithmeticCircuit.AccumulateCircuit(circuit, new[] { combined }, fs, proof.CircuitProof, weight, acc, group);
     }
 }

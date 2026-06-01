@@ -34,4 +34,7 @@ public interface IGroup
 
     /// <summary>Raise a scalar to an integer power (mod order).</summary>
     IScalar Pow(IScalar x, int y);
+
+    /// <summary>Try to parse a point from its serialized (compressed) form. Returns null if invalid.</summary>
+    IPoint? TryParsePoint(byte[] serialized);
 }
